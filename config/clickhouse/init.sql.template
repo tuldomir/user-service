@@ -1,0 +1,25 @@
+CREATE TABLE userevent
+(
+	event_type String,
+	id UUID,
+	email String,
+	created_at DateTime
+
+) ENGINE = MergeTree ORDER BY (event_type, created_at);
+
+
+CREATE TABLE default.userevent_queue
+(
+	event_type String,
+	id UUID,
+	email String,
+	created_at DateTime
+
+) ENGINE = Kafka('localhost:9092',
+    'useraddevent', 'clickhouse',
+    'JSONEachRow') settings kafka_thread_per_consumer = 0, kafka_num_consumers = 1;
+
+
+CREATE MATERIALIZED VIEW default.userevent_mv TO default.userevent AS
+SELECT *
+FROM default.userevent_queue;

@@ -1,0 +1,88 @@
+version: "3.9"
+
+services:
+
+  # redis:
+  #   container_name: redis-db
+  #   image: redis:7.0-alpine3.15
+  #   #    env_file: .env
+  #   command: "--requirepass ${REDIS_PASSWORD}"
+  #   restart: on-failure
+  #   ports:
+  #     - ${REDIS_PORT}:6379
+
+  # postgres:
+  #   container_name: users-db
+  #   image: postgres:14.2-alpine
+  #   #    env_file: .env
+  #   volumes:
+  #     - users-db:/var/lib/postgresql/data
+  #   restart: on-failure
+  #   deploy:
+  #     replicas: 1
+  #     resources:
+  #       limits:
+  #         cpus: "0.25"
+  #         memory: 512M
+  #   healthcheck:
+  #     test: ["CMD", "pg_isready", "-q", "-d", "${POSTGRES_DB}", "-U", "${POSTGRES_USER}"]
+  #     timeout: 45s
+  #     interval: 10s
+  #     retries: 10
+  #   ports:
+  #     - ${POSTGRES_PORT}:5432
+
+  # migrate:
+  #   image: migrate/migrate
+  #   #    env_file: .env
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ./${MIGRATION_DIR}:/migrations
+  #   command: ["-path", "/migrations", "-database",
+  #   'postgres://${POSTGRES_USER}:\
+  #    ${POSTGRES_PASSWORD}@${POSTGRES_HOST}\
+  #    :${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable', "up"]
+    
+  zookeeper:
+    image: zookeeper
+    container_name: zookeeper
+    ports:
+      - ${ZOOKEEPER_PORT1}:2181
+      - ${ZOOKEEPER_PORT2}:2182
+
+  kafka:
+    image: wurstmeister/kafka
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: kafka
+      KAFKA_ZOOKEEPER_CONNECT: ${ZOOKEEPER_HOST}:${ZOOKEEPER_PORT1}
+      KAFKA_CREATE_TOPICS: user_created_v1:1:1
+    ports:
+      - ${KAFKA_PORT}:9092
+
+  clickhouse-01:
+    image: yandex/clickhouse-server
+    container_name: clickhouse-01
+    volumes:
+      - ./proto/event.proto:/var/lib/clickhouse/format-schema/event.proto
+      - ./config/clickhouse/init.sh:/docker-entrypoint-initdb.d/init.sh
+        # - ./config/clickhouse/config.xml:/etc/clickhouse-server/config.xml
+        #- ./config/clickhouse/users.xml:/etc/clickhouse-server/users.xml
+      - clickhouse-01:/var/lib/clickhouse
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    depends_on:
+      - zookeeper
+    ports:
+        - ${CLICKHOUSE_PORT1}:9000
+        - ${CLICKHOUSE_PORT2}:8123
+
+volumes:
+  # users-db:
+  clickhouse-01:
