@@ -2,55 +2,88 @@ version: "3.9"
 
 services:
 
-  # redis:
-  #   container_name: redis-db
-  #   image: redis:7.0-alpine3.15
-  #   #    env_file: .env
-  #   command: "--requirepass ${REDIS_PASSWORD}"
-  #   restart: on-failure
-  #   ports:
-  #     - ${REDIS_PORT}:6379
+  userservice:
+    container_name: userservice
+    build:
+      dockerfile: ./app.Dockerfile
+      context: ./
+    environment:
+      - SERVER_HOST=${SERVER_HOST}
+      - SERVER_PORT=${SERVER_PORT}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - KAFKA_HOST=${KAFKA_HOST}
+      - KAFKA_PORT=${KAFKA_PORT}
+      - USERADD_TOPIC=${USERADD_TOPIC}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_DB=${REDIS_DB}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    depends_on:
+      - redis
+      - kafka
+      - postgres
+    ports:
+      - ${SERVER_PORT}:5555
+    networks:
+      - usernet
 
-  # postgres:
-  #   container_name: users-db
-  #   image: postgres:14.2-alpine
-  #   #    env_file: .env
-  #   volumes:
-  #     - users-db:/var/lib/postgresql/data
-  #   restart: on-failure
-  #   deploy:
-  #     replicas: 1
-  #     resources:
-  #       limits:
-  #         cpus: "0.25"
-  #         memory: 512M
-  #   healthcheck:
-  #     test: ["CMD", "pg_isready", "-q", "-d", "${POSTGRES_DB}", "-U", "${POSTGRES_USER}"]
-  #     timeout: 45s
-  #     interval: 10s
-  #     retries: 10
-  #   ports:
-  #     - ${POSTGRES_PORT}:5432
+  redis:
+    container_name: redis-db
+    image: redis:7.0-alpine3.15
+    command: "--requirepass ${REDIS_PASSWORD}"
+    restart: on-failure
+    ports:
+      - ${REDIS_PORT}:6379
+    networks:
+      - usernet
 
-  # migrate:
-  #   image: migrate/migrate
-  #   #    env_file: .env
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #   volumes:
-  #     - ./${MIGRATION_DIR}:/migrations
-  #   command: ["-path", "/migrations", "-database",
-  #   'postgres://${POSTGRES_USER}:\
-  #    ${POSTGRES_PASSWORD}@${POSTGRES_HOST}\
-  #    :${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable', "up"]
-    
+  postgres:
+    container_name: users-db
+    image: postgres:14.2-alpine
+    environment:
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - users-db:/var/lib/postgresql/data
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "pg_isready", "-q", "-d", "${POSTGRES_DB}", "-U", "${POSTGRES_USER}"]
+      timeout: 120s
+      interval: 10s
+      retries: 10
+    ports:
+      - ${POSTGRES_PORT}:5432
+    networks:
+      - usernet
+
+  migrate:
+    image: migrate/migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./${MIGRATION_DIR}:/migrations
+    command: ["-path", "/migrations", "-database",
+    'postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable',
+    "up"]
+    networks:
+      - usernet
+ 
   zookeeper:
     image: zookeeper
     container_name: zookeeper
     ports:
       - ${ZOOKEEPER_PORT1}:2181
       - ${ZOOKEEPER_PORT2}:2182
+    networks:
+      - usernet
 
   kafka:
     image: wurstmeister/kafka
@@ -58,20 +91,24 @@ services:
     depends_on:
       - zookeeper
     environment:
-      KAFKA_ADVERTISED_HOST_NAME: kafka
+      KAFKA_ADVERTISED_HOST_NAME: ${KAFKA_HOST}
       KAFKA_ZOOKEEPER_CONNECT: ${ZOOKEEPER_HOST}:${ZOOKEEPER_PORT1}
-      KAFKA_CREATE_TOPICS: user_created_v1:1:1
+      KAFKA_CREATE_TOPICS: useraddtopic:1:1
     ports:
       - ${KAFKA_PORT}:9092
+    networks:
+      - usernet
 
   clickhouse-01:
     image: yandex/clickhouse-server
     container_name: clickhouse-01
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_HOST: ${KAFKA_HOST}
+      KAFKA_PORT: ${KAFKA_PORT}
     volumes:
-      - ./proto/event.proto:/var/lib/clickhouse/format-schema/event.proto
-      - ./config/clickhouse/init.sh:/docker-entrypoint-initdb.d/init.sh
-        # - ./config/clickhouse/config.xml:/etc/clickhouse-server/config.xml
-        #- ./config/clickhouse/users.xml:/etc/clickhouse-server/users.xml
+      - ./clickhouse/config/init.sh:/docker-entrypoint-initdb.d/init.sh
       - clickhouse-01:/var/lib/clickhouse
     ulimits:
       nofile:
@@ -80,9 +117,14 @@ services:
     depends_on:
       - zookeeper
     ports:
-        - ${CLICKHOUSE_PORT1}:9000
-        - ${CLICKHOUSE_PORT2}:8123
+      - ${CLICKHOUSE_PORT1}:9000
+      - ${CLICKHOUSE_PORT2}:8123
+    networks:
+      - usernet
 
 volumes:
-  # users-db:
+  users-db:
   clickhouse-01:
+
+networks:
+  usernet:
