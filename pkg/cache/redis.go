@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"time"
-	"user-service/internal/domain"
+	"user-service/models"
 
 	"github.com/go-redis/redis/v8"
 )
@@ -25,7 +25,7 @@ func NewRedisCache(client *redis.Client) *RedisCache {
 
 // Set .
 func (c *RedisCache) Set(
-	ctx context.Context, key string, val []*domain.User) error {
+	ctx context.Context, key string, val []*models.User) error {
 
 	bs, err := json.Marshal(val)
 	if err != nil {
@@ -37,7 +37,7 @@ func (c *RedisCache) Set(
 
 // Get .
 func (c *RedisCache) Get(
-	ctx context.Context, key string) ([]*domain.User, bool, error) {
+	ctx context.Context, key string) ([]*models.User, bool, error) {
 
 	str, err := c.client.Get(ctx, key).Bytes()
 	switch {
@@ -48,7 +48,7 @@ func (c *RedisCache) Get(
 		return nil, false, err
 	}
 
-	var users []*domain.User
+	var users []*models.User
 	err = json.Unmarshal([]byte(str), &users)
 	if err != nil {
 		return nil, false, err

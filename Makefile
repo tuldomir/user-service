@@ -1,10 +1,10 @@
 MODULE_DIR=user-service
 
 PROTO_DIR=proto
-STUBS_DIR=pb
+STUBS_DIR=internal/pb
 
-REPO_DIR=repo
-DBMOCK_DIR=mock
+REPO_DIR=internal/repo
+DBMOCK_DIR=$(REPO_DIR)/mock
 
 stubs:
 	rm -rf $(STUBS_DIR)
@@ -17,10 +17,10 @@ stubs:
 		$(PROTO_DIR)/*.proto
 
 mockdb:
-	rm -rf $(REPO_DIR)/$(DBMOCK_DIR)
-	mkdir $(REPO_DIR)/$(DBMOCK_DIR)
+	rm -rf $(DBMOCK_DIR)
+	mkdir $(DBMOCK_DIR)
 	mockgen -package mockdb\
-		-destination $(REPO_DIR)/$(DBMOCK_DIR)/db.go\
+		-destination $(DBMOCK_DIR)/db.go\
 	       $(MODULE_DIR)/$(REPO_DIR) DB
 
 .PHONY: stubs mockdb

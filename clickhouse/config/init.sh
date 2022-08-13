@@ -8,16 +8,18 @@ CREATE TABLE IF NOT EXISTS userevent(
 
 	event_type String,
 	id UUID,
-	created_at DateTime
+	created_at DateTime64
 
 ) ENGINE = MergeTree ORDER BY (event_type, created_at);
+
+SET date_time_input_format='best_effort';
 
 
 CREATE TABLE IF NOT EXISTS events.userevent_queue
 (
     event_type String,
 	id UUID,
-	created_at DateTime
+	created_at DateTime64
 
 ) ENGINE = Kafka()
 SETTINGS
@@ -25,6 +27,8 @@ SETTINGS
 	kafka_topic_list = 'useraddtopic',
 	kafka_group_name = 'clickhouse',
 	kafka_format = 'JSONEachRow',
+    input_format_import_nested_json = 1,
+    date_time_input_format='best_effort',
 	kafka_row_delimiter = '',
 	kafka_num_consumers = 1,
 	kafka_thread_per_consumer = 0;

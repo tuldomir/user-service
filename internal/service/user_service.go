@@ -2,11 +2,11 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"time"
-	"user-service/internal/domain"
+	"user-service/internal/mapper"
+	"user-service/internal/pb"
 	"user-service/internal/repo"
-	"user-service/pb"
+	"user-service/models"
 	"user-service/pkg/cache"
 
 	"github.com/golang/protobuf/ptypes/empty"
@@ -39,9 +39,7 @@ func (s *UserService) Add(
 		return &pb.AddUserResponse{}, err
 	}
 
-	fmt.Println("line 40", req.Email, id.String())
-
-	user, err := s.userRepo.Add(ctx, &domain.User{
+	user, err := s.userRepo.Add(ctx, &models.User{
 		ID:        id,
 		Email:     req.Email,
 		CreatedAt: time.Now().UTC(),
@@ -50,7 +48,7 @@ func (s *UserService) Add(
 		return &pb.AddUserResponse{}, status.Errorf(codes.Internal, "cant add user %v", err)
 	}
 
-	protoUser := domain.EncodeUser(user)
+	protoUser := mapper.UserToProto(user)
 
 	// TODO publish to kafka useradded event in middleware/interceptor
 
@@ -84,6 +82,6 @@ func (s *UserService) List(
 			codes.Internal, "cant get users %v", err)
 	}
 
-	protoUsers := domain.EncodeUserList(users)
+	protoUsers := mapper.UserToProtoList(users)
 	return &pb.ListUsersResponse{Users: protoUsers}, nil
 }

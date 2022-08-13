@@ -2,7 +2,7 @@ package repo
 
 import (
 	"context"
-	"user-service/internal/domain"
+	"user-service/models"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -20,7 +20,7 @@ func NewPostgres(pg *pgxpool.Pool) *PostgresDB {
 
 // Add .
 func (db *PostgresDB) Add(
-	ctx context.Context, user *domain.User) (*domain.User, error) {
+	ctx context.Context, user *models.User) (*models.User, error) {
 
 	sql := `INSERT INTO users (id, email, created_at) VALUES ($1, $2, $3)`
 
@@ -43,7 +43,7 @@ func (db *PostgresDB) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 // List .
-func (db *PostgresDB) List(ctx context.Context) ([]*domain.User, error) {
+func (db *PostgresDB) List(ctx context.Context) ([]*models.User, error) {
 
 	sql := `SELECT id, email, created_at 
 	FROM users ORDER BY created_at`
@@ -55,10 +55,10 @@ func (db *PostgresDB) List(ctx context.Context) ([]*domain.User, error) {
 		return nil, err
 	}
 
-	users := make([]*domain.User, 0)
+	users := make([]*models.User, 0)
 	for rows.Next() {
 		var (
-			user domain.User
+			user models.User
 			id   string
 		)
 

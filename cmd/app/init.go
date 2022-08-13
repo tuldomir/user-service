@@ -14,6 +14,7 @@ import (
 )
 
 func initKafkaProducer() sarama.SyncProducer {
+	log.Println("init kafka")
 	brokerCfg := sarama.NewConfig()
 	brokerCfg.Producer.RequiredAcks = sarama.WaitForAll
 	brokerCfg.Producer.Return.Successes = true
@@ -33,10 +34,10 @@ func initKafkaProducer() sarama.SyncProducer {
 	}
 
 	return producer
-
 }
 
 func initPostgres() *pgxpool.Pool {
+	log.Println("init postgres")
 	user := os.Getenv("POSTGRES_USER")
 	pass := os.Getenv("POSTGRES_PASSWORD")
 	host := os.Getenv("POSTGRES_HOST")
@@ -57,6 +58,7 @@ func initPostgres() *pgxpool.Pool {
 }
 
 func initRedis() *redis.Client {
+	log.Println("init redis")
 	host := os.Getenv("REDIS_HOST")
 	// host := "localhost"
 	port := os.Getenv("REDIS_PORT")

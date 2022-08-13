@@ -7,8 +7,10 @@ import (
 	"net"
 	"testing"
 	"time"
-	"user-service/domain"
-	"user-service/pb"
+	"user-service/internal/mapper"
+	"user-service/internal/pb"
+	mockdb "user-service/internal/repo/mock"
+	"user-service/models"
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
@@ -50,14 +52,14 @@ func Test_UserService_Add(t *testing.T) {
 	id, err := uuid.NewUUID()
 	assert.NoError(t, err)
 
-	user := &domain.User{
+	user := &models.User{
 		ID:        id,
 		Email:     "foo@mail.test",
 		CreatedAt: time.Now().UTC(),
 	}
 
-	encodedUser := domain.EncodeUser(user)
-	assert.NotEmpty(t, encodedUser)
+	pbUser := mapper.UserToProto(user)
+	assert.NotEmpty(t, pbUser)
 
 	testCases := []struct {
 		name        string
@@ -75,8 +77,8 @@ func Test_UserService_Add(t *testing.T) {
 			checkResult: func(res *pb.AddUserResponse, err error) {
 				assert.NoErrorf(t, err, "Add method failed %v", err)
 				assert.NotNil(t, res)
-				assert.Equalf(t, encodedUser, res.User,
-					"expected : %v, actual: %v", encodedUser, res.User)
+				assert.Equalf(t, pbUser, res.User,
+					"expected : %v, actual: %v", pbUser, res.User)
 
 			},
 		},

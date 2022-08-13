@@ -2,7 +2,7 @@ package cache
 
 import (
 	"context"
-	"user-service/internal/domain"
+	"user-service/models"
 )
 
 // FakeEmptyCache .
@@ -15,12 +15,12 @@ func NewFakeEmptyCache() *FakeEmptyCache {
 
 // Set .
 func (c *FakeEmptyCache) Set(
-	ctx context.Context, key string, users []*domain.User) error {
+	ctx context.Context, key string, users []*models.User) error {
 	return nil
 }
 
 // Get .
 func (c *FakeEmptyCache) Get(
-	ctx context.Context, key string) ([]*domain.User, bool, error) {
+	ctx context.Context, key string) ([]*models.User, bool, error) {
 	return nil, false, nil
 }

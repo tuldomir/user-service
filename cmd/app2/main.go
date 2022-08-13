@@ -1,69 +1,69 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
-	"time"
+	"net"
+	"os"
+	"strconv"
 
 	"github.com/Shopify/sarama"
+	"github.com/go-redis/redis/v8"
 )
 
 func main() {
-	config := sarama.NewConfig()
-	config.Producer.RequiredAcks = sarama.WaitForAll
-	config.Producer.Retry.Max = 10
-	config.Producer.Return.Successes = true
+	c := initKafkaProducer()
+	c.Close()
+}
 
-	producer, err := sarama.NewSyncProducer([]string{"localhost:9092"}, config)
+func initRedis() *redis.Client {
+	log.Println("init redis")
+	// host := os.Getenv("REDIS_HOST")
+	host := "localhost"
+	port := os.Getenv("REDIS_PORT")
+	pass := os.Getenv("REDIS_PASSWORD")
+	strDB := os.Getenv("REDIS_DB")
+
+	db, err := strconv.Atoi(strDB)
 	if err != nil {
-		log.Fatalln("Failed to start Sarama producer:", err)
+		log.Fatalf("cant init redis %v\n", err)
 	}
 
-	type Event struct {
-		EventType string    `json:"event_type"`
-		CreatedAt time.Time `json:"created_at"`
+	addr := net.JoinHostPort(host, port)
+	opt := &redis.Options{
+		Network:  "tcp",
+		Addr:     addr,
+		DB:       db,
+		Password: pass,
 	}
 
-	var bs []byte
-	f := func() {
-
-		// 	uid, err := uuid.NewUUID()
-		// 	if err != nil {
-		// 		log.Fatalf("Failed gen uui %v", err)
-		// 	}
-
-		// 	bs, err = json.Marshal(domain.UserEvent{
-		// 		EventType: domain.UserAddedEvent,
-		// 		UID:       uid,
-		// 		CreatedAt: time.Now().UTC(),
-		// 	})
-		// 	if err != nil {
-		// 		log.Fatalf("Failed to marshal useraddevent %v", err)
-
-		// 	}
-
-		bs, err = json.Marshal(Event{
-			EventType: "useradevent",
-			CreatedAt: time.Now().UTC(),
-		})
-		if err != nil {
-			log.Fatalf("Failed to marshal useraddevent %v", err)
-
-		}
-
+	client := redis.NewClient(opt)
+	_, err = client.Ping(client.Context()).Result()
+	if err != nil {
+		log.Fatalf("cant init redis %v\n", err)
 	}
 
-	n := 10
-	for i := 0; i <= n; i++ {
-		f()
-		_, _, err := producer.SendMessage(&sarama.ProducerMessage{
-			Topic: "github",
-			Value: sarama.StringEncoder(bs),
-		})
+	return client
+}
 
-		if err != nil {
-			log.Fatalf("Failed to store your data %v", err)
-		}
+func initKafkaProducer() sarama.SyncProducer {
+	log.Println("init kafka")
+	brokerCfg := sarama.NewConfig()
+	brokerCfg.Producer.RequiredAcks = sarama.WaitForAll
+	brokerCfg.Producer.Return.Successes = true
+
+	// host := os.Getenv("KAFKA_HOST")
+	host := "localhost"
+	port := os.Getenv("KAFKA_PORT")
+
+	addr := net.JoinHostPort(host, port)
+	producer, err := sarama.NewSyncProducer(
+		[]string{
+			addr,
+		}, brokerCfg)
+
+	if err != nil {
+		log.Fatalf("cant init kafka producer %v", err)
 	}
 
+	return producer
 }

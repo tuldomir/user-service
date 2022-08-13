@@ -1,26 +1,23 @@
+# syntax=docker/dockerfile:1
+
 # Build
-FROM golang:1.18-alpine as build
+FROM golang:1.18-alpine as builder
 
-WORKDIR /build
+WORKDIR /builder
 
-COPY go.mod ./
-COPY go.sum ./
-COPY cmd ./
-COPY pb ./
-COPY pkg ./
-COPY internal ./
+COPY . .
 
 RUN go mod download
 
-RUN CGO_ENABLED=0 GOOS=linux go build ./app -o ./cmd/app
+RUN CGO_ENABLED=0 GOOS=linux go build -a -o /goapp ./cmd/app/
 
 ## Deploy
-FROM scratch
+FROM alpine:3.15
 
 WORKDIR /
 
-COPY --from=build ./app /app
+COPY --from=builder /goapp /goapp
 
-EXPOSE 5555
+EXPOSE 8080
 
-ENTRYPOINT ["/app"]
+ENTRYPOINT ["/goapp"]

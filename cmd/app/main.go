@@ -5,9 +5,9 @@ import (
 	"log"
 	"net"
 	"os"
+	"user-service/internal/pb"
 	"user-service/internal/repo"
 	"user-service/internal/service"
-	"user-service/pb"
 	"user-service/pkg/broker"
 	"user-service/pkg/cache"
 

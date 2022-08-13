@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"log"
 
-	"user-service/internal/domain"
-	"user-service/pb"
+	"user-service/internal/mapper"
+	"user-service/internal/pb"
+	"user-service/models"
 	"user-service/pkg/broker"
 	"user-service/pkg/cache"
 
@@ -43,20 +44,21 @@ func CacheMiddleware(c cache.Cache) grpc.UnaryServerInterceptor {
 			return handler(ctx, req)
 		}
 
-		list, ok, err := c.Get(ctx, userListKey)
+		users, ok, err := c.Get(ctx, userListKey)
 		if err != nil {
 			return &pb.ListUsersResponse{},
 				status.Errorf(codes.Internal, "cache error %v", err)
 		}
-
+		// FROM CACHE .
 		fmt.Println("got users from cache")
 
 		if ok {
-			pbusers := domain.EncodeUserList(list)
+			pbusers := mapper.UserToProtoList(users)
 			fmt.Println("returnin cache")
 			return &pb.ListUsersResponse{Users: pbusers}, nil
 		}
 
+		// FROM DB .
 		fmt.Println("getting users from real db")
 
 		resp, err = handler(ctx, req)
@@ -66,18 +68,18 @@ func CacheMiddleware(c cache.Cache) grpc.UnaryServerInterceptor {
 
 		r, ok := resp.(*pb.ListUsersResponse)
 		if !ok {
-			// TODO log error return normal response
+			log.Printf("cant cast response: %v\n", r)
 			return &pb.ListUsersResponse{},
 				status.Error(codes.Internal, "incorrect response type")
 		}
 
-		list, err = domain.DecodeUserList(r.Users)
+		users, err = mapper.ProtoToUserList(r.Users)
 		if err != nil {
 			return &pb.ListUsersResponse{},
 				status.Errorf(codes.Internal, err.Error())
 		}
 
-		if err = c.Set(ctx, userListKey, list); err != nil {
+		if err = c.Set(ctx, userListKey, users); err != nil {
 			return &pb.ListUsersResponse{},
 				status.Errorf(codes.Internal, err.Error())
 		}
@@ -107,13 +109,13 @@ func KafkaMiddleware(br broker.Broker) grpc.UnaryServerInterceptor {
 			return resp, err
 		}
 
-		user, e := domain.DecodeUser(r.User)
+		user, e := mapper.ProtoToUser(r.User)
 		if err != nil {
 			log.Printf("cant decode user: %v\n", e)
 			return resp, err
 		}
 
-		event := &domain.UserEvent{
+		event := &models.UserEvent{
 			EventType: userAddedEvent,
 			UID:       user.ID,
 			CreatedAt: user.CreatedAt,
