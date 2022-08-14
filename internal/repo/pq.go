@@ -4,7 +4,6 @@ import (
 	"context"
 	"user-service/models"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
@@ -24,8 +23,7 @@ func (db *PostgresDB) Add(
 
 	sql := `INSERT INTO users (id, email, created_at) VALUES ($1, $2, $3)`
 
-	_, err := db.pg.Exec(ctx, sql, user.ID.String(), user.Email, user.CreatedAt)
-	// err := row.Scan(&user.Email, &user.CreatedAt)
+	_, err := db.pg.Exec(ctx, sql, user.UID, user.Email, user.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -34,11 +32,11 @@ func (db *PostgresDB) Add(
 }
 
 // Delete .
-func (db *PostgresDB) Delete(ctx context.Context, id uuid.UUID) error {
+func (db *PostgresDB) Delete(ctx context.Context, uid string) error {
 
 	sql := `DELETE FROM users WHERE id=$1`
 
-	_, err := db.pg.Exec(ctx, sql, id.String())
+	_, err := db.pg.Exec(ctx, sql, uid)
 	return err
 }
 
@@ -57,21 +55,12 @@ func (db *PostgresDB) List(ctx context.Context) ([]*models.User, error) {
 
 	users := make([]*models.User, 0)
 	for rows.Next() {
-		var (
-			user models.User
-			id   string
-		)
+		var user models.User
 
-		if err := rows.Scan(&id, &user.Email, &user.CreatedAt); err != nil {
+		if err := rows.Scan(&user.UID, &user.Email, &user.CreatedAt); err != nil {
 			return nil, err
 		}
 
-		uid, err := uuid.Parse(id)
-		if err != nil {
-			return nil, err
-		}
-
-		user.ID = uid
 		users = append(users, &user)
 	}
 

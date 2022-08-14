@@ -7,7 +7,7 @@ CREATE DATABASE IF NOT EXISTS events;
 CREATE TABLE IF NOT EXISTS userevent(
 
 	event_type String,
-	id UUID,
+	uid String,
 	created_at DateTime64
 
 ) ENGINE = MergeTree ORDER BY (event_type, created_at);
@@ -18,7 +18,7 @@ SET date_time_input_format='best_effort';
 CREATE TABLE IF NOT EXISTS events.userevent_queue
 (
     event_type String,
-	id UUID,
+	uid String,
 	created_at DateTime64
 
 ) ENGINE = Kafka()

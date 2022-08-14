@@ -10,7 +10,6 @@ import (
 	models "user-service/models"
 
 	gomock "github.com/golang/mock/gomock"
-	uuid "github.com/google/uuid"
 )
 
 // MockDB is a mock of DB interface.
@@ -52,7 +51,7 @@ func (mr *MockDBMockRecorder) Add(arg0, arg1 interface{}) *gomock.Call {
 }
 
 // Delete mocks base method.
-func (m *MockDB) Delete(arg0 context.Context, arg1 uuid.UUID) error {
+func (m *MockDB) Delete(arg0 context.Context, arg1 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
 	ret0, _ := ret[0].(error)

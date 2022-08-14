@@ -1,4 +1,4 @@
 grpcurl -plaintext localhost:8080 list pb.UserService
 grpcurl -plaintext localhost:8080 pb.UserService/List
 grpcurl -plaintext -d '{"email":"alice@mail"}' localhost:8080 pb.UserService/Add 
-
+grpcurl -plaintext -d '{"uuid":"..."}' localhost:8080 pb.UserService/Delete

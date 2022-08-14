@@ -37,7 +37,7 @@ func main() {
 	defer redisClient.Close()
 	redisCache := cache.NewRedisCache(redisClient)
 
-	userSerivce := service.NewUserService(pg, redisCache)
+	userSerivce := service.NewUserService(pg)
 
 	producer := initKafkaProducer()
 	kafkaBroker := broker.NewKafkaBroker(producer)

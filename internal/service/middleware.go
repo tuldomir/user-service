@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"user-service/internal/mapper"
@@ -27,20 +26,13 @@ func CacheMiddleware(c cache.Cache) grpc.UnaryServerInterceptor {
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler) (resp interface{}, err error) {
 
-		if info.FullMethod == "/pb.UserService/Add" ||
-			info.FullMethod == "/pb.UserService/Delete" {
-
-			fmt.Println("not list meth, clearing cache")
+		if info.FullMethod != "/pb.UserService/List" {
+			log.Println("not list meth, clearing cache")
 
 			if err := c.Clear(ctx, userListKey); err != nil {
-				return &pb.ListUsersResponse{},
-					status.Errorf(codes.Internal, "cache error %v", err)
+				log.Printf("error clearing cache: %v\n", err)
 			}
 
-			return handler(ctx, req)
-		}
-
-		if info.FullMethod != "/pb.UserService/List" {
 			return handler(ctx, req)
 		}
 
@@ -49,20 +41,20 @@ func CacheMiddleware(c cache.Cache) grpc.UnaryServerInterceptor {
 			return &pb.ListUsersResponse{},
 				status.Errorf(codes.Internal, "cache error %v", err)
 		}
-		// FROM CACHE .
-		fmt.Println("got users from cache")
 
+		// FROM CACHE .
 		if ok {
+			log.Println("got users from cache")
 			pbusers := mapper.UserToProtoList(users)
-			fmt.Println("returnin cache")
 			return &pb.ListUsersResponse{Users: pbusers}, nil
 		}
 
 		// FROM DB .
-		fmt.Println("getting users from real db")
+		log.Println("getting users from real db")
 
 		resp, err = handler(ctx, req)
 		if err != nil {
+			// err nothing to cache
 			return resp, err
 		}
 
@@ -117,7 +109,7 @@ func KafkaMiddleware(br broker.Broker) grpc.UnaryServerInterceptor {
 
 		event := &models.UserEvent{
 			EventType: userAddedEvent,
-			UID:       user.ID,
+			UID:       user.UID,
 			CreatedAt: user.CreatedAt,
 		}
 

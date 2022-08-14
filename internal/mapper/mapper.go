@@ -13,7 +13,7 @@ func UserToProto(user *models.User) *pb.User {
 	createdAt := timestamppb.New(user.CreatedAt)
 
 	return &pb.User{
-		Uuid:      user.ID.String(),
+		Uuid:      user.UID,
 		Email:     user.Email,
 		CreatedAt: createdAt,
 	}
@@ -29,7 +29,7 @@ func ProtoToUser(user *pb.User) (*models.User, error) {
 	createdAt := user.CreatedAt.AsTime()
 
 	return &models.User{
-		ID:        id,
+		UID:       id.String(),
 		Email:     user.Email,
 		CreatedAt: createdAt,
 	}, nil
